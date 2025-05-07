@@ -2,9 +2,9 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<meta name="description" content="A nearly live map of Meshtastic nodes seen by the official Meshtastic MQTT server">
+<meta name="description" content="A nearly live map of Meshtastic nodes seen by the meshhessen meshtastic MQTT server">
 <title>MeshMap - Meshtastic Node Map</title>
-<link rel="preload" href="/nodes.json" as="fetch" crossorigin>
+<link rel="preload" href="/nodes" as="fetch" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900">
 <link rel="stylesheet" href="https://unpkg.com/font-awesome@4.7.0/css/font-awesome.min.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -341,7 +341,7 @@
   // fetches node data, updates map, repeats
   const drawMap = async () => {
     try {
-      await fetch('/nodes.json').then(r => r.json()).then(updateNodes)
+      await fetch('/nodes').then(r => r.json()).then(updateNodes)
     } catch (e) {
       console.error('Failed to update nodes:', e)
     }

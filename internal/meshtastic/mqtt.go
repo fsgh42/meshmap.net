@@ -10,17 +10,48 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/brianshea2/meshmap.net/internal/meshtastic/generated"
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/fsgh42/meshmap.net/internal/meshtastic/generated"
 	"google.golang.org/protobuf/proto"
 )
 
-var DefaultKey = []byte{
-	0xd4, 0xf1, 0xbb, 0x3a,
-	0x20, 0x29, 0x07, 0x59,
-	0xf0, 0xbc, 0xff, 0xab,
-	0xcf, 0x4e, 0x69, 0x01,
-}
+const (
+	defaultMqttHost = "tcp://mqtt.meshtastic.org:1883"
+	defaultMqttUser = "meshdev"
+	defaultMqttPass = "large4cats"
+)
+
+var (
+	DefaultKey = []byte{
+		0xd4, 0xf1, 0xbb, 0x3a,
+		0x20, 0x29, 0x07, 0x59,
+		0xf0, 0xbc, 0xff, 0xab,
+		0xcf, 0x4e, 0x69, 0x01,
+	}
+	mqttHost = func() string {
+		if host := os.Getenv("MQTT_HOST"); host != "" {
+			return fmt.Sprintf("tcp://%s", host)
+		}
+		return defaultMqttHost
+	}()
+	mqttUser = func() string {
+		if user := os.Getenv("MQTT_USER"); user != "" {
+			return user
+		}
+		return defaultMqttUser
+	}()
+	mqttPass = func() string {
+		if pass := os.Getenv("MQTT_PASS"); pass != "" {
+			return pass
+		}
+		return defaultMqttPass
+	}()
+	mqttClientID = func() string {
+		randomID := make([]byte, 4)
+		rand.Read(randomID)
+		return fmt.Sprintf("meshobserv-%x", randomID)
+	}()
+)
 
 func NewBlockCipher(key []byte) cipher.Block {
 	c, err := aes.NewCipher(key)
@@ -40,13 +71,11 @@ type MQTTClient struct {
 }
 
 func (c *MQTTClient) Connect() error {
-	randomId := make([]byte, 4)
-	rand.Read(randomId)
 	opts := mqtt.NewClientOptions()
-	opts.AddBroker("tcp://mqtt.meshtastic.org:1883")
-	opts.SetClientID(fmt.Sprintf("meshobserv-%x", randomId))
-	opts.SetUsername("meshdev")
-	opts.SetPassword("large4cats")
+	opts.AddBroker(mqttHost)
+	opts.SetClientID(mqttClientID)
+	opts.SetUsername(mqttUser)
+	opts.SetPassword(mqttPass)
 	opts.SetOrderMatters(false)
 	opts.SetDefaultPublishHandler(c.handleMessage)
 	c.Client = mqtt.NewClient(opts)
