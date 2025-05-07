@@ -2,9 +2,7 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"flag"
-	"io/fs"
 	"log"
 	"os"
 	"os/signal"
@@ -15,8 +13,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/brianshea2/meshmap.net/internal/meshtastic"
-	"github.com/brianshea2/meshmap.net/internal/meshtastic/generated"
+	"github.com/fsgh42/meshmap.net/internal/meshtastic"
+	"github.com/fsgh42/meshmap.net/internal/meshtastic/generated"
+	"github.com/fsgh42/meshmap.net/internal/webserver"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -210,18 +209,9 @@ func handleMessage(from uint32, topic string, portNum generated.PortNum, payload
 }
 
 func main() {
-	var dbPath, blockedPath string
-	flag.StringVar(&dbPath, "f", "", "node database `file`")
+	var blockedPath string
 	flag.StringVar(&blockedPath, "b", "", "node blocklist `file`")
 	flag.Parse()
-	// load or make NodeDB
-	if len(dbPath) > 0 {
-		err := Nodes.LoadFile(dbPath)
-		if err != nil && !errors.Is(err, fs.ErrNotExist) {
-			log.Fatalf("[error] load nodes: %v", err)
-		}
-		log.Printf("[info] loaded %v nodes from disk", len(Nodes))
-	}
 	if Nodes == nil {
 		Nodes = make(meshtastic.NodeDB)
 	}
@@ -289,26 +279,29 @@ func main() {
 	if err != nil {
 		log.Fatalf("[error] connect: %v", err)
 	}
+
+	// run webserver
+	addr := ":8080"
+	if _addr := os.Getenv("WEBSERVER_LISTEN"); _addr != "" {
+		addr = _addr
+	}
+	srv := webserver.NewWebServer(addr)
+	go srv.Run()
+
 	// start NodeDB prune and write loop
 	go func() {
 		for {
 			time.Sleep(PruneWriteInterval)
 			NodesMutex.Lock()
 			Nodes.Prune(NodeExpiration, NeighborExpiration, MetricsExpiration, NodeExpiration)
-			if len(dbPath) > 0 {
-				valid := Nodes.GetValid()
-				err := valid.WriteFile(dbPath)
-				if err != nil {
-					log.Fatalf("[error] write nodes: %v", err)
-				}
-				log.Printf("[info] wrote %v nodes to disk", len(valid))
-			}
+			srv.Nodes = Nodes.GetValid()
 			NodesMutex.Unlock()
 			if !Receiving.CompareAndSwap(true, false) {
 				log.Fatal("[crit] no messages received")
 			}
 		}
 	}()
+
 	// wait until exit
 	terminate := make(chan os.Signal, 1)
 	signal.Notify(terminate, syscall.SIGINT, syscall.SIGTERM)

@@ -1,1 +1,1 @@
-module github.com/brianshea2/meshmap.net
+module github.com/fsgh42/meshmap.net

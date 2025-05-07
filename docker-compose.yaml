@@ -1,0 +1,14 @@
+services:
+  meshobserve:
+    image: meshmap.net/meshobserve:${TAG:-local}
+    command:
+      ["/usr/bin/meshobserv"] #, "-b", "/blocklist.txt"]
+    build:
+      dockerfile: Dockerfile
+      target: meshobserv
+    environment:
+      MQTT_HOST: mesh-hessen.dns.army:1883
+      MQTT_USER: meshhessen
+      MQTT_PASS: meshhessen
+    ports:
+      - 8080:8080

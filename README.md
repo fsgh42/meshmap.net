@@ -2,11 +2,33 @@
 A nearly live map of [Meshtastic](https://meshtastic.org/) nodes seen by the official Meshtastic MQTT server
 
 ## Features
-- Shows all position-reporting nodes heard by Meshtastic's [official MQTT server](https://meshtastic.org/docs/configuration/module/mqtt/#connect-to-the-default-public-server)
+- Shows all position-reporting nodes heard by a given MQTT server.
+  - The default is Meshtastic's [official MQTT server](https://meshtastic.org/docs/configuration/module/mqtt/#connect-to-the-default-public-server)
   - Includes nodes self-reporting to MQTT or heard by another node reporting to MQTT
 - Node data is updated every minute
 - Nodes are removed from the map if their position is not updated after 24 hours
 - Search for nodes by name or ID
+
+## Build and Run
+
+requirements:
+- [docker](https://docs.docker.com/engine/install/)
+- [docker compose](https://docs.docker.com/compose/install/)
+
+### build
+
+```shell
+docker compose build
+```
+
+
+### run
+
+```shell
+docker compose up
+```
+
+
 
 ## FAQs
 
