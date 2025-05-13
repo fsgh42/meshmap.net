@@ -1,14 +1,21 @@
 services:
   meshobserve:
-    image: meshmap.net/meshobserve:${TAG:-local}
+    image: github.com/fsgh42/meshobserve:${TAG:-local}
     command:
-      ["/usr/bin/meshobserv"] #, "-b", "/blocklist.txt"]
+      - /usr/bin/meshobserv
+      - --blocklist=""
+      - --letsencrypt-cert-path=/certs
+      - --domain=map.meshhessen.de
     build:
       dockerfile: Dockerfile
-      target: meshobserv
+      target: runtime
     environment:
-      MQTT_HOST: ${MQTT_HOST:-""}
-      MQTT_USER: ${MQTT_USER:-""}
-      MQTT_PASS: ${MQTT_PASS:-""}
+      MQTT_HOST: ${MQTT_HOST:-}
+      MQTT_USER: ${MQTT_USER:-}
+      MQTT_PASS: ${MQTT_PASS:-}
+      # ACME_URL: 'https://acme-staging-v02.api.letsencrypt.org/directory'
     ports:
-      - 8080:8080
+      - ${EXTERNAL_IP:-127.0.0.1}:80:8080
+      - ${EXTERNAL_IP:-127.0.0.1}:443:8443
+    volumes:
+      - ${PWD}/data/certs:/certs

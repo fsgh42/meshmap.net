@@ -1,11 +1,15 @@
 package webserver
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/fsgh42/meshmap.net/internal/meshtastic"
+	"golang.org/x/crypto/acme"
+	"golang.org/x/crypto/acme/autocert"
 )
 
 var (
@@ -13,15 +17,41 @@ var (
 )
 
 type WebServer struct {
-	addr  string
-	mux   *http.ServeMux
-	Nodes meshtastic.NodeDB
+	mux         *http.ServeMux
+	Nodes       meshtastic.NodeDB
+	certManager *autocert.Manager
 }
 
 func (ws *WebServer) Run() {
-	log.Printf("[srv] start listening on %s", ws.addr)
-	http.ListenAndServe(ws.addr, ws.mux)
-	log.Printf("[srv] end listening on %s", ws.addr)
+	log.Printf("[srv] start HTTP serve on ports 8080(http) and 8443(https)")
+
+	go func() {
+		// port is mapped to external 80 via docker-compose
+		http.ListenAndServe(":8080", ws.certManager.HTTPHandler(ws.mux))
+	}()
+
+	getCertificate := func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		cert, err := ws.certManager.GetCertificate(chi)
+		if err != nil {
+			log.Printf("[tls]: error: %v", err)
+		}
+		return cert, err
+	}
+
+	httpsSrv := http.Server{
+		// port is mapped to external 443 via docker-compose
+		Addr:    ":8443",
+		Handler: ws.mux,
+		TLSConfig: &tls.Config{
+			GetCertificate: getCertificate,
+		},
+	}
+
+	if err := httpsSrv.ListenAndServeTLS("", ""); err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("[srv] end HTTP serve")
 }
 
 func handleMap(w http.ResponseWriter, r *http.Request) {
@@ -55,8 +85,30 @@ func logClients(next http.Handler) http.Handler {
 	})
 }
 
-func NewWebServer(addr string) *WebServer {
-	ws := &WebServer{addr: addr, mux: http.NewServeMux()}
+func NewAcmeManager(certPath, domain string) *autocert.Manager {
+	m := &autocert.Manager{
+		Cache:      autocert.DirCache(certPath),
+		Prompt:     autocert.AcceptTOS,
+		HostPolicy: autocert.HostWhitelist(domain),
+	}
+
+	if acmeUrl := os.Getenv("ACME_URL"); acmeUrl != "" {
+		log.Printf("[acme]: using URL: \"%s\"", acmeUrl)
+		m.Client = &acme.Client{
+			DirectoryURL: acmeUrl,
+		}
+	}
+
+	return m
+}
+
+func NewWebServer(certManager *autocert.Manager) *WebServer {
+
+	ws := &WebServer{
+		mux:         http.NewServeMux(),
+		Nodes:       meshtastic.NodeDB{},
+		certManager: certManager,
+	}
 
 	ws.mux.HandleFunc("/", redirectHandler)
 	ws.mux.Handle("/map", logClients(http.HandlerFunc(handleMap)))

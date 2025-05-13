@@ -34,6 +34,10 @@ var (
 	Receiving  atomic.Bool
 )
 
+func init() {
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
+}
+
 func handleMessage(from uint32, topic string, portNum generated.PortNum, payload []byte) {
 	Receiving.Store(true)
 	switch portNum {
@@ -209,16 +213,18 @@ func handleMessage(from uint32, topic string, portNum generated.PortNum, payload
 }
 
 func main() {
-	var blockedPath string
-	flag.StringVar(&blockedPath, "b", "", "node blocklist `file`")
+	blockedPath := flag.String("blocklist", "", "node blocklist `file`")
+	certPath := flag.String("letsencrypt-cert-path", "/certs", "directory to store letsencrypt certificates in")
+	domain := flag.String("domain", "map.meshhessen.de", "domain to obtain letsencrypt certificates for")
 	flag.Parse()
+
 	if Nodes == nil {
 		Nodes = make(meshtastic.NodeDB)
 	}
 	// load node blocklist
 	blocked := make(map[uint32]struct{})
-	if len(blockedPath) > 0 {
-		f, err := os.Open(blockedPath)
+	if *blockedPath != "" {
+		f, err := os.Open(*blockedPath)
 		if err != nil {
 			log.Fatalf("[error] open blocklist: %v", err)
 		}
@@ -245,7 +251,7 @@ func main() {
 			counters.Clear()
 		}
 	}()
-	// connect to MQTT
+	log.Println("[startup] connect to to mqtt...")
 	client := &meshtastic.MQTTClient{
 		Topics: []string{
 			"msh/+/2/map/",
@@ -280,14 +286,12 @@ func main() {
 		log.Fatalf("[error] connect: %v", err)
 	}
 
-	// run webserver
-	addr := ":8080"
-	if _addr := os.Getenv("WEBSERVER_LISTEN"); _addr != "" {
-		addr = _addr
-	}
-	srv := webserver.NewWebServer(addr)
+	log.Println("[startup] run webserver...")
+	acmeManager := webserver.NewAcmeManager(*certPath, *domain)
+	srv := webserver.NewWebServer(acmeManager)
 	go srv.Run()
 
+	log.Println("[startup] enter main loop...")
 	// start NodeDB prune and write loop
 	go func() {
 		for {
