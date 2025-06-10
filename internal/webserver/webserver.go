@@ -119,22 +119,55 @@ func NewWebServer(certManager *autocert.Manager) *WebServer {
 			},
 		),
 	))
-	ws.mux.HandleFunc("/site.webmanifest", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write(webmanifest)
-	})
-	ws.mux.HandleFunc("/android-chrome-192x192.png", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write(iconChrome192)
-	})
-	ws.mux.HandleFunc("/android-chrome-512x512.png", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write(iconChrome512)
-	})
-	ws.mux.HandleFunc("/favicon.ico", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write(iconFav)
-	})
+	ws.mux.Handle("/site.webmanifest", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(webmanifest)
+			}),
+	))
+	ws.mux.Handle("/android-chrome-192x192.png", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconChrome192)
+			}),
+	))
+	ws.mux.Handle("/android-chrome-512x512.png", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconChrome512)
+			}),
+	))
+	ws.mux.Handle("/favicon.ico", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconFav)
+			}),
+	))
+	ws.mux.Handle("/m-pwrd_bw_noborder.png", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconPoweredByMeshtastic)
+			}),
+	))
+	ws.mux.Handle("/meshhessen-cropped-MH_nM-32x32.png", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconMeshHessen32)
+			}),
+	))
+	ws.mux.Handle("/meshhessen-cropped-MH_nM-192x192.png", logClients(
+		http.HandlerFunc(
+			func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+				w.Write(iconMeshHessen192)
+			}),
+	))
 
 	return ws
 }

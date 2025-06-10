@@ -1,2 +1,5 @@
 image:
-	docker buildx build -t github.com/fsgh42/meshmap:local .
+	docker compose build
+
+run:
+	docker compose up

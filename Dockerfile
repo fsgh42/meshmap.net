@@ -32,12 +32,13 @@ RUN --mount=type=cache,target=/root/.cache/go-build \
 FROM golang:1.24 AS build
 
 WORKDIR /build
-COPY --from=generate-protobuf /app /build
+COPY . /build
+COPY --from=generate-protobuf /app/internal/meshtastic/generated /build/internal/meshtastic/generated
 
 RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=cache,target=/go/pkg/mod \
     go mod tidy && \
-    go build -v -o /usr/bin/meshobserv ./cmd/meshobserv
+    go build -a -v -o /usr/bin/meshobserv ./cmd/meshobserv
 
 # Final runtime
 FROM debian:bookworm-slim AS runtime
